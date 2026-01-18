@@ -6,4 +6,5 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "appium-python-client>=5.2.4",
+    "faker>=40.1.2",
 ]
