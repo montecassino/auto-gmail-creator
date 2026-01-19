@@ -1,0 +1,77 @@
+{
+  "version": "1.0",
+  "caps": [
+    {
+      "type": "text",
+      "name": "platformName",
+      "value": "Android"
+    },
+    {
+      "type": "text",
+      "name": "appium:automationName",
+      "value": "UiAutomator2"
+    },
+    {
+      "type": "text",
+      "name": "appium:deviceName",
+      "value": "emulator-5554"
+    },
+    {
+      "type": "text",
+      "name": "appium:appPackage",
+      "value": "com.android.settings"
+    },
+    {
+      "type": "text",
+      "name": "appium:appActivity",
+      "value": ".Settings"
+    },
+    {
+      "type": "boolean",
+      "name": "appium:noReset",
+      "value": true
+    },
+    {
+      "type": "boolean",
+      "name": "appium:ensureWebviewsHavePages",
+      "value": true
+    },
+    {
+      "type": "boolean",
+      "name": "appium:nativeWebScreenshot",
+      "value": true
+    },
+    {
+      "type": "number",
+      "name": "appium:newCommandTimeout",
+      "value": 3600
+    },
+    {
+      "type": "boolean",
+      "name": "appium:connectHardwareKeyboard",
+      "value": true
+    }
+  ],
+  "server": {
+    "local": {},
+    "remote": {},
+    "advanced": {},
+    "sauce": {
+      "dataCenter": "us-west-1"
+    },
+    "headspin": {},
+    "browserstack": {},
+    "lambdatest": {},
+    "testingbot": {},
+    "experitest": {},
+    "roboticmobi": {},
+    "remotetestkit": {},
+    "bitbar": {},
+    "kobiton": {},
+    "perfecto": {},
+    "pcloudy": {},
+    "mobitru": {}
+  },
+  "serverType": "remote",
+  "visibleProviders": []
+}

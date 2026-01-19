@@ -4,8 +4,9 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-import time
 from faker import Faker
+import random
+import time
 
 options = AppiumOptions()
 options.load_capabilities({
@@ -17,136 +18,109 @@ options.load_capabilities({
 })
 
 driver = webdriver.Remote("http://127.0.0.1:4723", options=options)
+wait = WebDriverWait(driver, 20) 
+fake = Faker()
+
+def safe_click(selector_type, selector_value, name="element"):
+    print(f"Waiting for {name}...")
+    try:
+        element = wait.until(EC.element_to_be_clickable((selector_type, selector_value)))
+        element.click()
+        return element
+    except Exception as e:
+        print(f"Failed to click {name}: {e}")
+        return None
 
 try:
-    print("Waiting for Home Screen...")
-    wait = WebDriverWait(driver, 15)
+    safe_click(AppiumBy.ACCESSIBILITY_ID, "Settings", "Settings Icon")
 
-    # click settings app
-    settings_icon = wait.until(EC.element_to_be_clickable(
-        (AppiumBy.ACCESSIBILITY_ID, "Settings")
-    ))
-    settings_icon.click()
-
-    # find section node that has 'Google' in it then click 
-    scrollable_ui = 'new UiScrollable(new UiSelector().scrollable(true))'
-
-    print("Searching for 'Google' section...")
+    print("Scrolling to Google...")
+    scroll_ui = ('new UiScrollable(new UiSelector().scrollable(true))'
+                 '.scrollIntoView(new UiSelector().text("Google"))')
+    driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, scroll_ui)
     
+    safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Google")', "Google Section")
+
+    # account section, use bounds as fallback
     try:
-        # scroll until 'Google' appears
-        driver.find_element(by=AppiumBy.ANDROID_UIAUTOMATOR, 
-                            value=f'{scrollable_ui}.scrollIntoView(new UiSelector().text("Google"))')
-        
-        # wait for google node to be clickable 
-        google_btn = wait.until(EC.element_to_be_clickable(
-            (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Google")')
+        target_view = wait.until(EC.element_to_be_clickable(
+            (AppiumBy.XPATH, '//android.view.View[@bounds="[11,210][1080,400]"]')
         ))
-        
-        # click it once clickable
-        google_btn.click()
-        print("Successfully clicked Google.")
+        target_view.click()
+    except:
+        print("XPath view not found, trying coordinate tap...")
+        driver.tap([(545, 305)])
+
+    # full text card
+    safe_click(AppiumBy.ID, "com.google.android.gms:id/og_full_text_card_root", "Account Card")
+
+    # create account and selection
+    safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Create account")', "Create Account Btn")
+    safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("For my personal use")', "Personal Use Option")
+
+    # first name
+    first_name_selector = 'new UiSelector().resourceId("firstName")'
+    wait.until(EC.presence_of_element_located((AppiumBy.ANDROID_UIAUTOMATOR, first_name_selector)))
     
-    except Exception as e:
-        print(f"Failed to find or click Google: {e}")
+    # specific screen location to trigger keyboard
+    driver.tap([(539, 640)]) 
+    time.sleep(1) # allow keyboard animation to finish
     
-    time.sleep(5)
+    first_name_field = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, first_name_selector)
+    first_name_field.send_keys(fake.first_name())
+    print("Entered First Name.")
 
-    # click 'account' section 
-    target_view = wait.until(EC.element_to_be_clickable((
-        AppiumBy.XPATH, '//android.view.View[@bounds="[11,210][1080,400]"]'
-    )))
-    
-    target_view.click()
-
-    print("Looking for the Full Text Card...")
     try:
-        card_root = wait.until(EC.presence_of_element_located(
-            (AppiumBy.ID, "com.google.android.gms:id/og_full_text_card_root")
-        ))
+        last_name_field = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().resourceId("lastName")')
+        last_name_field.click()
+        last_name_field.send_keys(fake.last_name())
+    except:
+        print("Last name field skipped.")
 
-        actions = ActionChains(driver)
-        actions.move_to_element(card_root).click().perform()
+    # combined selector to find "NEXT" or "Next"
+    next_logic = 'new UiSelector().textMatches("(?i)next")' # Case-insensitive regex
+    safe_click(AppiumBy.ANDROID_UIAUTOMATOR, next_logic, "Next Button")
+
+    # birthday and gender
+    months = ["January", "February", "March", "April", "May", "June", 
+          "July", "August", "September", "October", "November", "December"]
+    genders = ["Male", "Female", "Rather not say"]
+
+    r_month = random.choice(months)
+    r_day = str(random.randint(1, 28))
+    r_year = str(random.randint(1985, 2005))
+    r_gender = random.choice(genders)
+
+    try:
+        print(f"Selecting Month: {r_month}")
+        safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().className("android.widget.Spinner").instance(0)', "Month Spinner")
         
-        print("Successfully clicked the account card.")
+        safe_click(AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().text("{r_month}")', r_month)
 
-    except Exception as e:
-        print(f"Standard click failed, attempting coordinate tap: {e}")
-        # fallback: center of [131,778][975,868] is x=553, y=823
-        driver.tap([(553, 823)])    
-        print("Successfully clicked the View node.")
+        print(f"Entering Day: {r_day}")
+        day_field = safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().resourceId("day")', "Day Field")
+        day_field.send_keys(r_day)
 
-    print("Looking for 'Create account' button...")
-    try:
-        create_account_btn = wait.until(EC.element_to_be_clickable(
-            (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Create account")')
-        ))
+        print(f"Entering Year: {r_year}")
+        year_field = safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().resourceId("year")', "Year Field")
+        year_field.send_keys(r_year)
+
+        print(f"Selecting Gender: {r_gender}")
+        safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().className("android.widget.Spinner").instance(1)', "Gender Spinner")
         
-        create_account_btn.click()
-        print("Clicked 'Create account'!")
+        safe_click(AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().text("{r_gender}")', r_gender)
+
+        if driver.is_keyboard_shown():
+            driver.hide_keyboard()
+            
+        safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().textMatches("(?i)next")', "Next Button")
 
     except Exception as e:
-        print(f"Could not click 'Create account': {e}")
-        driver.tap([(196, 1175)])
-
-    print("Selecting 'For my personal use'...")
-    try:
-        personal_use_btn = wait.until(EC.element_to_be_clickable(
-            (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("For my personal use")')
-        ))
-        
-        personal_use_btn.click()
-        print("Selected 'For my personal use'.")
-
-    except Exception as e:
-        print(f"Could not find the menu option: {e}")
-
-    # names (First and last)
-    fake = Faker()
-    random_first = fake.first_name()
-    try:
-        print("Searching for First Name using UiSelector...")
-
-        first_name_field = wait.until(EC.presence_of_element_located(
-            (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().resourceId("firstName")')
-        ))
-
-        driver.tap([(539, 640)])
-        time.sleep(0.5)
-
-        first_name_field.send_keys(random_first)
-        print(f"Success! Entered: {random_first}")
-
-        try:
-            last_name_field = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().resourceId("lastName")')
-            last_name_field.click()
-            last_name_field.send_keys(fake.last_name())
-        except:
-            print("Last name field not found, skipping...")
-
-    except Exception as e:
-        print(f"Even with UiSelector it failed: {e}")
-
-    # next button
-    try:
-        print("Looking for the 'NEXT' button...")
-
-        next_btn = wait.until(EC.element_to_be_clickable(
-            (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("NEXT")')
-        ))
-        
-        next_btn.click()
-        print("Clicked NEXT successfully.")
-
-    except Exception as e:
-        print(f"Could not click NEXT: {e}")
-        try:
-            driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Next")').click()
-        except:
-            print("Fallback failed as well.")
+        print(f"Safe click sequence failed: {e}")
 
 except Exception as e:
-    print(f"An error occurred: {e}")
+    print(f"Critical failure: {e}")
 
 finally:
+    time.sleep(5)
     driver.quit()
