@@ -13,3 +13,6 @@ I need multiple google accounts for some projects. Web browser automation is out
 0. Run uv install
 1. Run 'appium' command on Powershell
 2. Run 'uv run main.py'
+
+## UPDATE 01/19/2026
+- This project has failed its purpose because SMS verification is apparently blocked while using an emulator. Will find a new way. 

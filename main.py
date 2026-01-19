@@ -6,7 +6,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from faker import Faker
 import random
+import secrets
 import time
+import string
 
 options = AppiumOptions()
 options.load_capabilities({
@@ -20,6 +22,45 @@ options.load_capabilities({
 driver = webdriver.Remote("http://127.0.0.1:4723", options=options)
 wait = WebDriverWait(driver, 20) 
 fake = Faker()
+
+def does_node_exist(selector):
+    try:
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located(
+            (AppiumBy.ANDROID_UIAUTOMATOR, selector)
+        ))
+        return True
+    except:
+        return False
+
+def generate_username():
+    first = fake.first_name().lower().replace("'", "")
+    last = fake.last_name().lower().replace("'", "")
+    
+    numbers = "".join(random.choices(string.digits, k=random.randint(4, 6)))
+    
+    username = f"{first}.{last}{numbers}"
+    
+    return username[:30]
+
+def generate_password(length=12):
+    letters_lower = string.ascii_lowercase
+    letters_upper = string.ascii_uppercase
+    digits = string.digits
+    special = "!@#$%^&*" 
+    
+    password = [
+        secrets.choice(letters_lower),
+        secrets.choice(letters_upper),
+        secrets.choice(digits),
+        secrets.choice(special)
+    ]
+    
+    all_chars = letters_lower + letters_upper + digits + special
+    password += [secrets.choice(all_chars) for _ in range(length - 4)]
+    
+    secrets.SystemRandom().shuffle(password)
+    
+    return "".join(password)
 
 def safe_click(selector_type, selector_value, name="element"):
     print(f"Waiting for {name}...")
@@ -82,7 +123,7 @@ try:
     safe_click(AppiumBy.ANDROID_UIAUTOMATOR, next_logic, "Next Button")
 
     # birthday and gender
-    months = ["January", "February", "March", "April", "May", "June", 
+    months = ["March", "April", "May", "June", 
           "July", "August", "September", "October", "November", "December"]
     genders = ["Male", "Female", "Rather not say"]
 
@@ -94,7 +135,7 @@ try:
     try:
         print(f"Selecting Month: {r_month}")
         safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().className("android.widget.Spinner").instance(0)', "Month Spinner")
-        
+        time.sleep(1)
         safe_click(AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().text("{r_month}")', r_month)
 
         print(f"Entering Day: {r_day}")
@@ -114,6 +155,82 @@ try:
             driver.hide_keyboard()
             
         safe_click(AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().textMatches("(?i)next")', "Next Button")
+
+    except Exception as e:
+        print(f"Safe click sequence failed: {e}")
+
+    # custom username case
+    if does_node_exist('new UiSelector().text("How you’ll sign in")'):
+        try:
+            username_selector = 'new UiSelector().className("android.widget.EditText")'
+
+            wait.until(EC.presence_of_element_located((AppiumBy.ANDROID_UIAUTOMATOR, username_selector)))
+        
+            # specific screen location to trigger keyboard
+            driver.tap([(410, 703)]) 
+            time.sleep(1) # allow keyboard animation to finish
+        
+            username_field = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, username_selector)
+            username_field.send_keys(generate_username())
+            print("Entered Username.")
+
+            next_logic = 'new UiSelector().textMatches("(?i)next")' 
+            safe_click(AppiumBy.ANDROID_UIAUTOMATOR, next_logic, "Next Button")
+        except Exception as e:
+            print(f"Safe click sequence failed: {e}")
+    else:
+        # choose username case
+        try:
+            print("Checking for 'Create your own Gmail address' option...")
+            
+            create_own_selector = 'new UiSelector().text("Create your own Gmail address")'
+            
+            create_option = wait.until(EC.element_to_be_clickable(
+                (AppiumBy.ANDROID_UIAUTOMATOR, create_own_selector)
+            ))
+            
+            driver.tap([(94, 974)])
+            print("Successfully selected 'Create your own' option.")
+
+        except Exception as e:
+            print(f"Failed to select Gmail option: {e}")
+
+        try:
+            username_field = wait.until(EC.presence_of_element_located(
+                (AppiumBy.CLASS_NAME, "android.widget.EditText")
+            ))
+            
+            username = generate_username()
+            
+            username_field.send_keys(username)
+            print(f"Entered Username: {username}")
+            
+            if driver.is_keyboard_shown():
+                driver.hide_keyboard()
+                
+            next_logic = 'new UiSelector().textMatches("(?i)next")' 
+            safe_click(AppiumBy.ANDROID_UIAUTOMATOR, next_logic, "Next Button")
+
+        except Exception as e:
+            print(f"Error entering username: {e}")
+
+    # password
+    try:
+        password_selector = 'new UiSelector().className("android.widget.EditText")'
+
+        wait.until(EC.presence_of_element_located((AppiumBy.ANDROID_UIAUTOMATOR, password_selector)))
+    
+        # specific screen location to trigger keyboard
+        driver.tap([(539, 703)]) 
+        time.sleep(1) # allow keyboard animation to finish
+    
+        username_field = driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, password_selector)
+        username_field.send_keys(generate_password())
+        print("Entered Password.")
+
+        next_logic = 'new UiSelector().textMatches("(?i)next")' 
+        safe_click(AppiumBy.ANDROID_UIAUTOMATOR, next_logic, "Next Button")
+
 
     except Exception as e:
         print(f"Safe click sequence failed: {e}")
